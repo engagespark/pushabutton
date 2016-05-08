@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width; maximum-scale=1; minimum-scale=1;" />
+        <title>Push a Button</title>
+        <link rel="stylesheet" href="static/style.css" />
+        <script src="static/jquery-2.2.3.min.js"></script>
+        <script src="static/script.js"></script>
+    </head>
+    <body>
+        <h1>Push a Button</h1>
+        <p class="subtitle">What could possibly go wrong?</p>
+
+        <div class="buttons">
+            <p id="loading-buttons" class="loading">Loading …</p>
+            <p class="nothing hidden">Sorry, we've got no buttons for you to push.</p>
+            <ul id="available-buttons" class="available hidden">{{.buttons}}</ul>
+        </div>
+    </body>
+</html>
