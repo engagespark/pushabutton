@@ -6,7 +6,7 @@ $(function() {
       $.post('push/' + $button.data('buttonid'), {}, null, "json"
       ).done(function(data) {
         console.log(data)
-        alert(data.buttonId + " was pressed!")
+        alert(data.buttonId + " was pressed! -> " + data.pushId)
       }).fail(function(error) {
         console.log(error)
         alert(error)

@@ -7,10 +7,14 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/exec"
 	"path"
 	"path/filepath"
 	"strings"
 	"text/template"
+	"time"
+
+	"github.com/nu7hatch/gouuid"
 )
 
 func StartServerOrCrash(addr string) {
@@ -72,7 +76,15 @@ type PostPush struct{}
 func (handler PostPush) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	buttonId := r.URL.Path
 
-	responseData := map[string]string{"buttonId": buttonId}
+	pushId, err := pushButton(buttonId)
+
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, "Could not push button.")
+		fmt.Printf("Could not push button: %v\n", err)
+	}
+
+	responseData := map[string]string{"buttonId": buttonId, "pushId": pushId}
 	payload, err := json.Marshal(responseData)
 
 	if err != nil {
@@ -83,7 +95,7 @@ func (handler PostPush) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-type", "application/json")
 	w.Write(payload)
-	fmt.Printf("Pressed " + buttonId + "!\n")
+	fmt.Sprintf("Pressed %v: %v\n", buttonId, pushId)
 }
 
 type Button struct {
@@ -115,8 +127,6 @@ func AvailableButtons() []Button {
 		if info.Mode()&os.ModePerm&0100 == 0 {
 			fmt.Printf("skipping %v\n", candidate)
 			return nil
-		} else {
-			fmt.Println(info.Mode())
 		}
 
 		filename := path.Base(candidate)
@@ -167,4 +177,47 @@ func containsWord(words []string, candidate string) bool {
 		}
 	}
 	return false
+}
+
+func pushButton(buttonId string) (string, error) {
+	if !containsWord(AvailableButtonIds(), buttonId) {
+		return "", fmt.Errorf("Could not find button with id: %q", buttonId)
+	}
+
+	uuid, err := uuid.NewV4()
+	if err != nil {
+		return "", err
+	}
+
+	cmdPath := path.Join(buttonsDir, buttonId)
+	fmt.Printf("Running script %v\n", cmdPath)
+	cmd := exec.Command(cmdPath)
+
+	// open the out file for writing
+	outfile, err := os.Create(path.Join(logsDir, fmt.Sprintf("%v-%v-%v.log", time.Now().UTC().Unix(), uuid, buttonId)))
+	if err != nil {
+		return "", err
+	}
+	cmd.Stdout = outfile
+
+	go func() {
+		defer outfile.Close()
+
+		err = cmd.Start()
+		if err != nil {
+			return
+		}
+		cmd.Wait()
+	}()
+
+	return uuid.String(), nil
+}
+
+func AvailableButtonIds() []string {
+	buttons := AvailableButtons()
+	ids := make([]string, len(buttons))
+	for _, button := range buttons {
+		ids = append(ids, button.Id)
+	}
+	return ids
 }
