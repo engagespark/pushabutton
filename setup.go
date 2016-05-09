@@ -10,6 +10,7 @@ import (
 const (
 	assetsDir      = "assets"
 	buttonsDir     = "buttons"
+	logsDir        = "logs"
 	scriptFilename = "what_is_the_current_date.sh"
 )
 
@@ -22,6 +23,12 @@ func Setup() {
 	} else {
 		fmt.Println("Buttons dir exists, skipping.")
 	}
+	if !exists(logsDir) {
+		fmt.Println("Logs directory missing. Creating it for you.")
+		createLogsDir()
+	} else {
+		fmt.Println("Logs dir exists, skipping.")
+	}
 }
 
 func createButtonLibDir() {
@@ -29,6 +36,14 @@ func createButtonLibDir() {
 		fmt.Errorf("Could not create directory for buttons: ", err)
 	}
 	fmt.Printf("Created buttons directory: ./%v\n", buttonsDir)
+
+}
+
+func createLogsDir() {
+	if err := os.Mkdir(logsDir, 0700); err != nil {
+		fmt.Errorf("Could not create directory for logs: ", err)
+	}
+	fmt.Printf("Created logs directory: ./%v\n", logsDir)
 
 }
 

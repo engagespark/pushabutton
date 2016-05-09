@@ -112,9 +112,11 @@ func AvailableButtons() []Button {
 		if candidate == buttonsDir {
 			return nil
 		}
-		if info.Mode()&0100 > 0 {
-			fmt.Printf("skipping")
+		if info.Mode()&os.ModePerm&0100 == 0 {
+			fmt.Printf("skipping %v\n", candidate)
 			return nil
+		} else {
+			fmt.Println(info.Mode())
 		}
 
 		filename := path.Base(candidate)
