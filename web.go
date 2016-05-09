@@ -120,15 +120,14 @@ func AvailableButtons() []Button {
 		}
 
 		filename := path.Base(candidate)
-		ext := filepath.Ext(filename)
+
+		if strings.TrimSpace(filename) == "" {
+			fmt.Printf("skipping suspicous whitespace file %q\n", candidate)
+			return nil
+		}
+
 		buttonId := filename
-		title := strings.Title(
-			strings.Replace(
-				strings.Replace(
-					strings.TrimSuffix(filename, ext),
-					"_", " ", -1),
-				"-", " ", -1),
-		)
+		title := generateTitle(filename)
 
 		buttons = append(buttons, Button{
 			Id:    html.EscapeString(buttonId),
@@ -137,4 +136,35 @@ func AvailableButtons() []Button {
 		return nil
 	})
 	return buttons
+}
+
+func generateTitle(filename string) string {
+	questionWords := []string{"how", "what", "who", "why", "where", "when"}
+	ext := filepath.Ext(filename)
+
+	title := strings.Title(
+		strings.Replace(
+			strings.Replace(
+				strings.TrimSuffix(filename, ext),
+				"_", " ", -1),
+			"-", " ", -1),
+	)
+
+	firstWord := strings.Fields(title)[0]
+	if containsWord(questionWords, strings.ToLower(firstWord)) {
+		title += "?"
+	} else {
+		title += "!"
+	}
+
+	return title
+}
+
+func containsWord(words []string, candidate string) bool {
+	for _, word := range words {
+		if word == candidate {
+			return true
+		}
+	}
+	return false
 }
