@@ -1,19 +1,45 @@
 $(function() {
-  function makeButtonPushable($btn) {
-    $btn.click(function(event) {
-      var $button = $(event.target)
-      $button.addClass("running")
-      $.post('push/' + $button.data('buttonid'), {}, null, "json"
+  function closeParameterModal() {
+    $('#parameterModal').hide()
+  }
+
+  function showParameterModal($button, buttonDef, sendFunc) {
+
+    var $modal = $('#parameterModal');
+
+    $('#parameterModal ol').empty()
+    buttonDef.Parameters.forEach(function(parameterDef) {
+      $('<li>' + parameterDef.Name + '</li>').appendTo($('#parameterModal ol'))
+    })
+
+    $('#btnPushWithParameters').unbind('click').click(function() {sendFunc('text1')})
+    $('#btnCancelParameters').unbind('click').click(closeParameterModal)
+
+    $modal.removeClass('hidden')
+    $modal.show()
+  }
+
+  function makeButtonPushable($button, buttonDef) {
+    function pushFunc(pushArguments) {
+      $.post('push/' + $button.data('buttonid'), pushArguments || {}, null, "json"
       ).done(function(data) {
-        console.log(data)
         alert(data.buttonId + " was pressed! -> " + data.pushId)
       }).fail(function(error) {
-        console.log(error)
         alert(error)
         alert(error.responseText)
       }).always(function() {
         $button.removeClass("running")
+        closeParameterModal()
       })
+    }
+
+    $button.click(function(event) {
+      $button.addClass("running")
+      if (buttonDef.Parameters && buttonDef.Parameters.length > 0) {
+        showParameterModal($button, buttonDef, pushFunc)
+      } else {
+        pushFunc()
+      }
     })
   }
 
@@ -25,12 +51,12 @@ $(function() {
     } else {
       $('#available-buttons').removeClass('hidden')
     }
-    buttons.forEach(function(button) {
+    buttons.forEach(function(buttonDef) {
       var $button = $('<li></li>')
-                      .text(button.Title)
-                      .data('buttonid', button.Id)
+                      .text(buttonDef.Title)
+                      .data('buttonid', buttonDef.Id)
                       .appendTo($('#available-buttons'))
-      makeButtonPushable($button)
+      makeButtonPushable($button, buttonDef)
     })
   })
 })

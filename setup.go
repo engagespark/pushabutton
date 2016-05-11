@@ -15,7 +15,7 @@ const (
 )
 
 func Setup() {
-	vanilla := !exists(buttonsDir)
+	vanilla := !FileExists(buttonsDir)
 	if vanilla {
 		fmt.Println("Buttons directory missing. Creating it for you and filling it with examples.")
 		createButtonLibDir()
@@ -23,7 +23,7 @@ func Setup() {
 	} else {
 		fmt.Println("Buttons dir exists, skipping.")
 	}
-	if !exists(logsDir) {
+	if !FileExists(logsDir) {
 		fmt.Println("Logs directory missing. Creating it for you.")
 		createLogsDir()
 	} else {
@@ -47,7 +47,7 @@ func createLogsDir() {
 
 }
 
-func exists(path string) bool {
+func FileExists(path string) bool {
 	_, err := os.Stat(path)
 	if err == nil {
 		return true
@@ -63,7 +63,7 @@ func createExampleScript() {
 	fmt.Println("Checking example script.")
 	targetPath := path.Join(buttonsDir, scriptFilename)
 	sourcePath := path.Join(assetsDir, scriptFilename)
-	if exists(targetPath) {
+	if FileExists(targetPath) {
 		fmt.Println("Example script exists, not touching it: ", targetPath)
 		return
 	}

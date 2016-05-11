@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"html"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -16,6 +17,15 @@ import (
 
 	"github.com/nu7hatch/gouuid"
 )
+
+const (
+	parametersSuffix    = ".parameters"
+	choicesSuffix       = ".choices.sh"
+	parameterTypeString = "string"
+	parameterTypeChoice = "choice"
+)
+
+var knownParameterTypes = []string{parameterTypeChoice, parameterTypeString}
 
 func StartServerOrCrash(addr string) {
 	http.Handle("/static/", http.StripPrefix("/static/", ServeAsset{}))
@@ -98,9 +108,17 @@ func (handler PostPush) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	fmt.Sprintf("Pressed %v: %v\n", buttonId, pushId)
 }
 
+type ParameterDef struct {
+	Name        string
+	Type        string
+	Description string
+	Details     map[string]interface{}
+}
+
 type Button struct {
-	Id    string
-	Title string
+	Id         string
+	Title      string
+	Parameters []ParameterDef
 }
 
 type GetButtons struct{}
@@ -136,12 +154,23 @@ func AvailableButtons() []Button {
 			return nil
 		}
 
+		if len(buttons) > 0 && strings.HasPrefix(filename, buttons[len(buttons)-1].Id) {
+			fmt.Printf("skipping parameter file %v of %v\n", candidate, buttons[len(buttons)-1].Id)
+			return nil
+		}
+
 		buttonId := filename
 		title := generateTitle(filename)
+		parameters, err := loadParameters(filename)
+		if err != nil {
+			fmt.Printf("Error loading button from %v: %v\n", filename, err)
+			return nil
+		}
 
 		buttons = append(buttons, Button{
-			Id:    html.EscapeString(buttonId),
-			Title: html.EscapeString(title),
+			Id:         html.EscapeString(buttonId),
+			Title:      html.EscapeString(title),
+			Parameters: parameters,
 		})
 		return nil
 	})
@@ -220,4 +249,59 @@ func AvailableButtonIds() []string {
 		ids = append(ids, button.Id)
 	}
 	return ids
+}
+
+func loadParameters(filename string) ([]ParameterDef, error) {
+	parameters := []ParameterDef{}
+
+	parametersFile := path.Join(buttonsDir, filename+parametersSuffix)
+	if !FileExists(parametersFile) {
+		return parameters, nil
+	}
+	bytes, err := ioutil.ReadFile(parametersFile)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, line := range strings.Split(string(bytes), "\n") {
+		if strings.TrimSpace(line) == "" {
+			continue // Last line can be empty, I don't care.
+		}
+		parameter := ParameterDef{}
+		components := strings.Split(line, ",")
+		parameter.Name = strings.TrimSpace(components[0])
+		if parameter.Name == "" {
+			return nil, fmt.Errorf("%q is not a valid parameter name for %v", parameter.Name, filename)
+		}
+		parameter.Type = parameterTypeString
+		if len(components) > 1 {
+			parameter.Type = strings.TrimSpace(components[1])
+		}
+		if !containsWord(knownParameterTypes, parameter.Type) {
+			return nil, fmt.Errorf("%q is not a valid parameter type for %v", parameter.Name, filename)
+		}
+
+		parameter.Description = ""
+		if len(components) > 2 {
+			parameter.Description = strings.TrimSpace(components[2])
+		}
+
+		parameter.Details = make(map[string]interface{})
+		if parameter.Type == parameterTypeChoice {
+			choices, err := loadChoices(filename, parameter.Name)
+			if err != nil {
+				return nil, fmt.Errorf("Could not load choices for %v", err)
+			}
+			parameter.Details["choices"] = choices
+		}
+
+		parameters = append(parameters, parameter)
+	}
+
+	return parameters, nil
+
+}
+
+func loadChoices(filename string, parameterName string) ([]string, error) {
+	return []string{"hello", "yes"}, nil
 }

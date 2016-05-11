@@ -14,8 +14,19 @@
 
         <div class="buttons">
             <p id="loading-buttons" class="loading">Loading …</p>
-            <p class="nothing hidden">Sorry, we've got no buttons for you to push.</p>
+            <p id="no-buttons" class="nothing hidden">Sorry, we've got no buttons for you to push.</p>
             <ul id="available-buttons" class="available hidden">{{.buttons}}</ul>
+        </div>
+
+        <div id="parameterModal" class="hidden">
+            <div class="modal-background">&nbsp;</div>
+            <div class="modal-foreground">
+                Can't just push the button! We need input!
+                <ol>
+                </ol>
+                <button id="btnPushWithParameters" onclick="">Push for real</button>
+                <button id="btnCancelParameters">Cancel</button>
+            </div>
         </div>
     </body>
 </html>
