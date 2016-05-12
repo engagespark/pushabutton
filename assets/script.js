@@ -23,10 +23,7 @@ $(function() {
     function pushFunc(pushArguments) {
       $.post('push/' + $button.data('buttonid'), pushArguments || {}, null, "json"
       ).done(function(data) {
-        alert(data.buttonId + " was pressed! -> " + data.pushId)
       }).fail(function(error) {
-        alert(error)
-        alert(error.responseText)
       }).always(function() {
         $button.removeClass("running")
         closeParameterModal()

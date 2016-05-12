@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"html"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -12,6 +13,7 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"text/template"
 	"time"
 
@@ -213,33 +215,24 @@ func pushButton(buttonId string) (string, error) {
 		return "", fmt.Errorf("Could not find button with id: %q", buttonId)
 	}
 
-	uuid, err := uuid.NewV4()
+	pushUuid, err := uuid.NewV4()
 	if err != nil {
 		return "", err
 	}
+	pushId := pushUuid.String()
 
-	cmdPath := path.Join(buttonsDir, buttonId)
-	fmt.Printf("Running script %v\n", cmdPath)
-	cmd := exec.Command(cmdPath)
+	scriptPath := path.Join(buttonsDir, buttonId)
+	now := time.Now().UTC()
 
-	// open the out file for writing
-	outfile, err := os.Create(path.Join(logsDir, fmt.Sprintf("%v-%v-%v.log", time.Now().UTC().Unix(), uuid, buttonId)))
-	if err != nil {
-		return "", err
+	if err := logButtonPush(buttonId, scriptPath, pushId, now); err != nil {
+		return "", fmt.Errorf("Could not log button push: %v", err)
 	}
-	cmd.Stdout = outfile
 
-	go func() {
-		defer outfile.Close()
+	if err := runScriptForButton(buttonId, scriptPath, pushId, now); err != nil {
+		return "", fmt.Errorf("Could not run button script: %v", err)
+	}
 
-		err = cmd.Start()
-		if err != nil {
-			return
-		}
-		cmd.Wait()
-	}()
-
-	return uuid.String(), nil
+	return pushId, nil
 }
 
 func AvailableButtonIds() []string {
@@ -269,10 +262,12 @@ func loadParameters(filename string) ([]ParameterDef, error) {
 		}
 		parameter := ParameterDef{}
 		components := strings.Split(line, ",")
+
 		parameter.Name = strings.TrimSpace(components[0])
 		if parameter.Name == "" {
 			return nil, fmt.Errorf("%q is not a valid parameter name for %v", parameter.Name, filename)
 		}
+
 		parameter.Type = parameterTypeString
 		if len(components) > 1 {
 			parameter.Type = strings.TrimSpace(components[1])
@@ -299,9 +294,64 @@ func loadParameters(filename string) ([]ParameterDef, error) {
 	}
 
 	return parameters, nil
-
 }
 
 func loadChoices(filename string, parameterName string) ([]string, error) {
 	return []string{"hello", "yes"}, nil
+}
+
+func logButtonPush(buttonId string, scriptPath string, uuid string, now time.Time) error {
+	logline := fmt.Sprintf("%v, %v, %v, %v, %v\n", now.Unix(), now.Format(time.RFC3339), uuid, buttonId, scriptPath)
+	f, err := os.OpenFile(logfilePath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
+	if err != nil {
+		return err
+	}
+
+	defer f.Close()
+
+	if _, err = f.WriteString(logline); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func runScriptForButton(buttonId string, scriptPath string, pushId string, now time.Time) error {
+	fmt.Printf("Running script %v\n", scriptPath)
+	cmd := exec.Command(scriptPath)
+
+	// open the out file for writing
+	pushLogPath := path.Join(logsDir, fmt.Sprintf("%v-%v-%v.log", now.Unix(), pushId, buttonId))
+	outfile, err := os.Create(pushLogPath)
+	if err != nil {
+		return err
+	}
+	cmd.Stdout = outfile
+
+	go func() {
+		defer outfile.Close()
+
+		err := cmd.Start()
+		if err != nil {
+			logPushResult(outfile, "ERROR: Command did not even start: %v", err)
+		}
+		err = cmd.Wait()
+		if exitError, ok := err.(*exec.ExitError); ok {
+			waitStatus := exitError.Sys().(syscall.WaitStatus)
+			logPushResult(outfile, fmt.Sprintf("FAILURE: Exited with exit code (%v): %v", waitStatus.ExitStatus(), exitError))
+			return
+
+		} else if err != nil {
+			logPushResult(outfile, fmt.Sprintf("ERROR: Script did not run: %v", err))
+			return
+		}
+
+		logPushResult(outfile, "SUCCESS: Command exited without errors")
+	}()
+
+	return nil
+}
+
+func logPushResult(outfile io.Writer, statusline string) {
+	fmt.Fprintf(outfile, "\n\n============================\n"+statusline+"\n============================\n")
 }

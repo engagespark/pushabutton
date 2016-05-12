@@ -8,11 +8,13 @@ import (
 )
 
 const (
-	assetsDir      = "assets"
-	buttonsDir     = "buttons"
-	logsDir        = "logs"
-	scriptFilename = "what_is_the_current_date.sh"
+	assetsDir             = "assets"
+	buttonsDir            = "buttons"
+	logsDir               = "logs"
+	exampleScriptFilename = "what_is_the_current_date.sh"
 )
+
+var logfilePath = path.Join(logsDir, "journal.log")
 
 func Setup() {
 	vanilla := !FileExists(buttonsDir)
@@ -61,8 +63,8 @@ func FileExists(path string) bool {
 
 func createExampleScript() {
 	fmt.Println("Checking example script.")
-	targetPath := path.Join(buttonsDir, scriptFilename)
-	sourcePath := path.Join(assetsDir, scriptFilename)
+	targetPath := path.Join(buttonsDir, exampleScriptFilename)
+	sourcePath := path.Join(assetsDir, exampleScriptFilename)
 	if FileExists(targetPath) {
 		fmt.Println("Example script exists, not touching it: ", targetPath)
 		return
