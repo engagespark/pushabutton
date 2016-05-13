@@ -358,6 +358,7 @@ func runScriptForButton(buttonId string, scriptCall []string, pushId string, now
 		return err
 	}
 	cmd.Stdout = outfile
+	cmd.Stderr = outfile
 
 	go func() {
 		defer outfile.Close()
