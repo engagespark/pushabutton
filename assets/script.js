@@ -1,4 +1,24 @@
 $(function() {
+  function htmlForParamDef(parameterDef) {
+    var html = (
+      "<p>" + parameterDef.Name + "</p>"
+                + '<p class="description">' + parameterDef.Description + "</p>"
+    )
+
+    if (parameterDef.Type == "string") {
+      html += '<input type="text"></input>'
+    }
+
+    if (parameterDef.Type == "choice") {
+      html += '<select>' + parameterDef.Details.choices.map(function(choice) {
+        return '<option value="' + choice + '">' + choice + '</option>'
+      }) + '</select>'
+
+    }
+
+    return html
+  }
+
   function closeParameterModal() {
     $('#parameterModal').hide()
   }
@@ -8,11 +28,26 @@ $(function() {
     var $modal = $('#parameterModal');
 
     $('#parameterModal ol').empty()
-    buttonDef.Parameters.forEach(function(parameterDef) {
-      $('<li>' + parameterDef.Name + '</li>').appendTo($('#parameterModal ol'))
+    buttonDef.Parameters.forEach(function(parameterDef, idx) {
+      var elementId = 'param-' + idx ;
+      parameterDef.elementId = elementId
+      $('<li id="' + elementId + '">' + htmlForParamDef(parameterDef) + '</li>').appendTo($('#parameterModal ol'))
     })
 
-    $('#btnPushWithParameters').unbind('click').click(function() {sendFunc('text1')})
+    function getArguments() {
+      return buttonDef.Parameters.map(function(parameterDef, idx) {
+        if (parameterDef.Type == 'string') {
+          return $('#' + parameterDef.elementId + ' input').val()
+        } else if (parameterDef.Type == 'choice') {
+          return $('#' + parameterDef.elementId + ' select').val()
+        } else {
+          return ""
+        }
+      })
+    }
+
+    $('#btnPushWithParameters').unbind('click').click(
+      function() {sendFunc({"pushArguments": getArguments()})})
     $('#btnCancelParameters').unbind('click').click(closeParameterModal)
 
     $modal.removeClass('hidden')
@@ -21,8 +56,13 @@ $(function() {
 
   function makeButtonPushable($button, buttonDef) {
     function pushFunc(pushArguments) {
-      $.post('push/' + $button.data('buttonid'), pushArguments || {}, null, "json"
-      ).done(function(data) {
+      $.ajax(
+        'push/' + $button.data('buttonid'), {
+          method: 'POST',
+          contentType: 'application/json; charset=UTF-8',
+          data: JSON.stringify(pushArguments || {pushArguments: []}),
+          dataType: "json"
+        }).done(function(data) {
       }).fail(function(error) {
       }).always(function() {
         $button.removeClass("running")

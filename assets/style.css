@@ -103,3 +103,7 @@ ul.available li.loading {
         margin: .5em;
     }
 }
+
+.description {
+    font-size: .7em;
+}

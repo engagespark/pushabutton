@@ -88,12 +88,42 @@ type PostPush struct{}
 func (handler PostPush) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	buttonId := r.URL.Path
 
-	pushId, err := pushButton(buttonId)
+	var reqPayload map[string]interface{}
+	decoder := json.NewDecoder(r.Body)
+	err := decoder.Decode(&reqPayload)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, "Could not decode JSON.")
+		fmt.Printf("Could not decode JSON: %v\n", err)
+		return
+	}
+	genericArgs, ok := reqPayload["pushArguments"]
+	if !ok {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintf(w, "Parameter pushArguments missing.")
+		fmt.Printf("Parameter pushArguments missing")
+		return
+	}
+
+	var scriptArguments []string
+	for _, arg := range genericArgs.([]interface{}) {
+		stringArg, ok := arg.(string)
+		if !ok {
+			fmt.Fprintf(w, "Arguments need to be strings.")
+			fmt.Printf("Arguments need to be strings")
+			return
+		}
+		scriptArguments = append(scriptArguments, stringArg)
+	}
+	fmt.Println("Got arguments", scriptArguments)
+
+	pushId, err := pushButton(buttonId, scriptArguments)
 
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, "Could not push button.")
 		fmt.Printf("Could not push button: %v\n", err)
+		return
 	}
 
 	responseData := map[string]string{"buttonId": buttonId, "pushId": pushId}
@@ -103,6 +133,7 @@ func (handler PostPush) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, "Could not encode payload as JSON.")
 		fmt.Printf("Could not encode payload as JSON: %v\n", err)
+		return
 	}
 
 	w.Header().Set("Content-type", "application/json")
@@ -210,7 +241,7 @@ func containsWord(words []string, candidate string) bool {
 	return false
 }
 
-func pushButton(buttonId string) (string, error) {
+func pushButton(buttonId string, scriptArguments []string) (string, error) {
 	if !containsWord(AvailableButtonIds(), buttonId) {
 		return "", fmt.Errorf("Could not find button with id: %q", buttonId)
 	}
@@ -221,14 +252,14 @@ func pushButton(buttonId string) (string, error) {
 	}
 	pushId := pushUuid.String()
 
-	scriptPath := path.Join(buttonsDir, buttonId)
+	scriptCall := append([]string{path.Join(buttonsDir, buttonId)}, scriptArguments...)
 	now := time.Now().UTC()
 
-	if err := logButtonPush(buttonId, scriptPath, pushId, now); err != nil {
+	if err := logButtonPush(buttonId, scriptCall, pushId, now); err != nil {
 		return "", fmt.Errorf("Could not log button push: %v", err)
 	}
 
-	if err := runScriptForButton(buttonId, scriptPath, pushId, now); err != nil {
+	if err := runScriptForButton(buttonId, scriptCall, pushId, now); err != nil {
 		return "", fmt.Errorf("Could not run button script: %v", err)
 	}
 
@@ -300,8 +331,8 @@ func loadChoices(filename string, parameterName string) ([]string, error) {
 	return []string{"hello", "yes"}, nil
 }
 
-func logButtonPush(buttonId string, scriptPath string, uuid string, now time.Time) error {
-	logline := fmt.Sprintf("%v, %v, %v, %v, %v\n", now.Unix(), now.Format(time.RFC3339), uuid, buttonId, scriptPath)
+func logButtonPush(buttonId string, scriptCall []string, uuid string, now time.Time) error {
+	logline := fmt.Sprintf("%v, %v, %v, %v, %v\n", now.Unix(), now.Format(time.RFC3339), uuid, buttonId, strings.Join(scriptCall, " "))
 	f, err := os.OpenFile(logfilePath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
 	if err != nil {
 		return err
@@ -316,9 +347,9 @@ func logButtonPush(buttonId string, scriptPath string, uuid string, now time.Tim
 	return nil
 }
 
-func runScriptForButton(buttonId string, scriptPath string, pushId string, now time.Time) error {
-	fmt.Printf("Running script %v\n", scriptPath)
-	cmd := exec.Command(scriptPath)
+func runScriptForButton(buttonId string, scriptCall []string, pushId string, now time.Time) error {
+	fmt.Printf("Running script %v\n", strings.Join(scriptCall, " "))
+	cmd := exec.Command(scriptCall[0], scriptCall[1:]...)
 
 	// open the out file for writing
 	pushLogPath := path.Join(logsDir, fmt.Sprintf("%v-%v-%v.log", now.Unix(), pushId, buttonId))
@@ -333,7 +364,7 @@ func runScriptForButton(buttonId string, scriptPath string, pushId string, now t
 
 		err := cmd.Start()
 		if err != nil {
-			logPushResult(outfile, "ERROR: Command did not even start: %v", err)
+			logPushResult(outfile, fmt.Sprintf("ERROR: Command did not even start: %v", err))
 		}
 		err = cmd.Wait()
 		if exitError, ok := err.(*exec.ExitError); ok {
