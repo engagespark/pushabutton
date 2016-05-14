@@ -5,12 +5,30 @@
 body {
     font-family: Garamond, serif;
     font-size: 2em;
-    margin: 2em 30% 2em 30%;
     z-index: 100;
 }
 
+h2 {
+    margin-top: 1em;
+
+}
+
+pre {
+    background-color: #EEEEEE;
+    padding: 0em 1em;
+    width: auto;
+}
+
+.slim {
+    margin: 2em 30% 2em 30%;
+}
+
+a:hover {
+    text-decoration: none;
+}
+
 @media (max-width: 768px) {
-    body {
+    .slim {
         font-size: 1em;
         margin: .5em;
     }
@@ -27,11 +45,12 @@ body {
     font-style: italic;
 }
 
-.buttons {
+.buttons, .logs {
     margin-top: 2em;
 }
 
 .subtitle {
+    margin-top: .5em;
     font-size: .7em;
 }
 
@@ -40,7 +59,7 @@ ul.available {
     margin:0;
 }
 
-ul.available li {
+.buttons ul.available li {
     list-style-type:none;
 
     width: auto;
@@ -57,15 +76,23 @@ ul.available li {
     border-radius: 1em;
 }
 
-ul.available li:hover {
+.buttons ul.available li:hover {
     background-color: #FFF0F0;
-    box-shadow: inset -1px 0 0 red;
+    box-shadow: inset -4px 0 -4px 0 red;
     cursor: pointer;
 }
 
 ul.available li.loading {
     border-width: 1em;
 }
+
+.logs ul.available li {
+    font-size: .7em;
+    list-style-type:none;
+    width: auto;
+    margin: .5em 0em;
+}
+
 
 #parameterModal {
     position: absolute;
@@ -106,4 +133,21 @@ ul.available li.loading {
 
 .description {
     font-size: .7em;
+}
+
+.logs .cmd, .logs .date{
+    font-size: .7em;
+}
+
+.logs pre {
+    display: inline;
+}
+
+.notice {
+    border-style: solid none;
+    border-width: 2px;
+    border-color: #BB0000;
+    background-color: #FFDDDD;
+    margin: 2em;
+    padding: 1em;
 }

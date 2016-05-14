@@ -23,6 +23,10 @@ $(function() {
     $('#parameterModal').hide()
   }
 
+  function redirectToLog(response) {
+    window.location = '/log/' + response.pushId + '?autorefresh=10'
+  }
+
   function showParameterModal($button, buttonDef, sendFunc) {
 
     var $modal = $('#parameterModal');
@@ -47,7 +51,7 @@ $(function() {
     }
 
     $('#btnPushWithParameters').unbind('click').click(
-      function() {sendFunc({"pushArguments": getArguments()})})
+      function() {sendFunc({"pushArguments": getArguments()}).then(redirectToLog)})
     $('#btnCancelParameters').unbind('click').click(closeParameterModal)
 
     $modal.removeClass('hidden')
@@ -56,8 +60,8 @@ $(function() {
 
   function makeButtonPushable($button, buttonDef) {
     function pushFunc(pushArguments) {
-      $.ajax(
-        'push/' + $button.data('buttonid'), {
+      return $.ajax(
+        'api/push/' + $button.data('buttonid'), {
           method: 'POST',
           contentType: 'application/json; charset=UTF-8',
           data: JSON.stringify(pushArguments || {pushArguments: []}),
@@ -71,16 +75,21 @@ $(function() {
     }
 
     $button.click(function(event) {
-      $button.addClass("running")
-      if (buttonDef.Parameters && buttonDef.Parameters.length > 0) {
-        showParameterModal($button, buttonDef, pushFunc)
-      } else {
-        pushFunc()
+      function chooseFunc() {
+        if (buttonDef.Parameters && buttonDef.Parameters.length > 0) {
+          return function() {
+            return showParameterModal($button, buttonDef, pushFunc)
+          }
+        }
+        return pushFunc().then(redirectToLog)
       }
+
+      $button.addClass("running")
+      chooseFunc()()
     })
   }
 
-  $.getJSON('buttons', function(buttons) {
+  $.getJSON('api/buttons', function(buttons) {
     $('#loading-buttons').hide()
 
     if (!buttons) {

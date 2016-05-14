@@ -1,9 +1,11 @@
 package pushabutton
 
 import (
+	"encoding/csv"
 	"encoding/json"
 	"fmt"
 	"html"
+	"html/template"
 	"io"
 	"io/ioutil"
 	"log"
@@ -12,9 +14,9 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"syscall"
-	"text/template"
 	"time"
 
 	"github.com/nu7hatch/gouuid"
@@ -31,8 +33,12 @@ var knownParameterTypes = []string{parameterTypeChoice, parameterTypeString}
 
 func StartServerOrCrash(addr string) {
 	http.Handle("/static/", http.StripPrefix("/static/", ServeAsset{}))
-	http.Handle("/push/", http.StripPrefix("/push/", PostPush{}))
-	http.Handle("/buttons", GetButtons{})
+	http.Handle("/api/push/", http.StripPrefix("/api/push/", PostPush{}))
+	http.Handle("/api/buttons", http.StripPrefix("/api/buttons", GetButtons{}))
+	http.Handle("/api/logs", http.StripPrefix("/api/logs", GetLogs{}))
+
+	http.Handle("/log/", http.StripPrefix("/log/", ServeLog{}))
+	http.Handle("/logs", ServeLogIndex{})
 	http.Handle("/", ServeIndex{})
 	log.Fatal(http.ListenAndServe(addr, nil))
 }
@@ -51,36 +57,19 @@ func (handler ServeAsset) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "text/css")
 	fmt.Fprint(w, string(data))
-
 }
 
 type ServeIndex struct{}
 
 func (handler ServeIndex) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	data, err := Asset(path.Join(assetsDir, "index.html"))
+	tmpl, err := loadTemplate("index.html")
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprintf(w, "Template not found")
-		fmt.Printf("Template for page not found: %v\n", err)
+		fmt.Fprintf(w, "Cannot display page.")
+		fmt.Printf("ERROR: %v\n", err)
 		return
 	}
-	indexHtml := string(data)
-	tmpl, err := template.New("index.html").Parse(indexHtml)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprintf(w, "Could not parse template.")
-		fmt.Printf("Could not parse template for page: %v\n", err)
-		return
-	}
-
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprintf(w, "Could not execute template.")
-		fmt.Printf("Could not execute template for page: %v\n", err)
-	}
-
 	err = tmpl.Execute(w, map[string]string{})
-
 }
 
 type PostPush struct{}
@@ -163,6 +152,7 @@ func (handler GetButtons) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		fmt.Fprintf(w, "Could not encode payload as JSON.")
 		fmt.Printf("Could not encode payload as JSON: %v\n", err)
+		return
 	}
 
 	w.Header().Set("Content-type", "application/json")
@@ -193,7 +183,7 @@ func AvailableButtons() []Button {
 		}
 
 		buttonId := filename
-		title := generateTitle(filename)
+		title := formatTitle(filename)
 		parameters, err := loadParameters(filename)
 		if err != nil {
 			fmt.Printf("Error loading button from %v: %v\n", filename, err)
@@ -210,7 +200,7 @@ func AvailableButtons() []Button {
 	return buttons
 }
 
-func generateTitle(filename string) string {
+func formatTitle(filename string) string {
 	questionWords := []string{"how", "what", "who", "why", "where", "when"}
 	ext := filepath.Ext(filename)
 
@@ -229,7 +219,7 @@ func generateTitle(filename string) string {
 		title += "!"
 	}
 
-	return title
+	return strings.TrimSpace(title)
 }
 
 func containsWord(words []string, candidate string) bool {
@@ -386,4 +376,164 @@ func runScriptForButton(buttonId string, scriptCall []string, pushId string, now
 
 func logPushResult(outfile io.Writer, statusline string) {
 	fmt.Fprintf(outfile, "\n\n============================\n"+statusline+"\n============================\n")
+}
+
+type ServeLogIndex struct{}
+
+func (handler ServeLogIndex) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	tmpl, err := loadTemplate("logs.html")
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, "Cannot display page.")
+		fmt.Printf("ERROR: %v\n", err)
+		return
+	}
+	err = tmpl.Execute(w, map[string]string{})
+}
+
+func loadTemplate(filename string) (*template.Template, error) {
+	data, err := Asset(path.Join(assetsDir, filename))
+	if err != nil {
+		return nil, fmt.Errorf("Could not find template: %v", err)
+	}
+	indexHtml := string(data)
+	tmpl, err := template.New("index.html").Parse(indexHtml)
+	if err != nil {
+		return nil, fmt.Errorf("Could not parse template: %v", err)
+	}
+
+	return tmpl, nil
+}
+
+type LogSummaryEntry struct {
+	PushId      string
+	ButtonId    string
+	Timestamp   string
+	DateTimeUTC string
+	Title       string
+	Cmd         string
+}
+
+type GetLogs struct{}
+
+func (handler GetLogs) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	entries, err := AvailableLogs()
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, "Could not read logs.")
+		fmt.Printf("Could not read logs: %v\n", err)
+		return
+	}
+	payload, err := json.Marshal(entries)
+
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, "Could not encode payload as JSON.")
+		fmt.Printf("Could not encode payload as JSON: %v\n", err)
+		return
+	}
+
+	w.Header().Set("Content-type", "application/json")
+	w.Write(payload)
+}
+
+func AvailableLogs() ([]LogSummaryEntry, error) {
+	var entries []LogSummaryEntry
+
+	csvFile, err := os.OpenFile(logfilePath, os.O_RDONLY, 0644)
+	if os.IsNotExist(err) {
+		return entries, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	r := csv.NewReader(csvFile)
+
+	records, err := r.ReadAll()
+	if err != nil {
+		return nil, err
+	}
+
+	for _, record := range records {
+		if len(record) != 5 {
+			fmt.Printf("Ignoring record: %v", record)
+			continue
+		}
+		entries = append(entries, LogSummaryEntry{
+			Timestamp:   strings.TrimSpace(record[0]),
+			DateTimeUTC: strings.TrimSpace(record[1]),
+			PushId:      strings.TrimSpace(record[2]),
+			ButtonId:    strings.TrimSpace(record[3]),
+			Cmd:         strings.TrimSpace(record[4]),
+			Title:       formatTitle(strings.TrimSpace(record[3])),
+		})
+	}
+
+	return entries, nil
+}
+
+type LogEntry struct {
+	LogSummaryEntry
+	Stdouterr string
+}
+
+type ServeLog struct{}
+
+func (handler ServeLog) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	pushId := r.URL.Path
+	fmt.Printf("Getting log for %v\n", pushId)
+
+	entry := findOrGenerateLogEntry(pushId)
+
+	tmpl, err := loadTemplate("logEntry.html")
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprintf(w, "Cannot display page.")
+		fmt.Printf("ERROR: %v\n", err)
+		return
+	}
+
+	autorefreshInSec, err := strconv.Atoi(r.URL.Query().Get("autorefresh"))
+	if err != nil {
+		autorefreshInSec = 0
+	}
+	tmpl.Execute(w, map[string]interface{}{
+		"autorefreshInSec": autorefreshInSec,
+		"entry":            entry,
+	})
+}
+
+func findOrGenerateLogEntry(pushId string) LogEntry {
+	entry := LogEntry{
+		LogSummaryEntry: LogSummaryEntry{
+			PushId:   pushId,
+			ButtonId: "N/A",
+			Cmd:      "N/A",
+			Title:    "N/A",
+		},
+		Stdouterr: "N/A",
+	}
+	logs, err := AvailableLogs()
+	if err != nil {
+		fmt.Printf("Cannot read logs: %v", err)
+		logs = []LogSummaryEntry{}
+	}
+	for _, summary := range logs {
+		if summary.PushId == pushId {
+			entry.LogSummaryEntry = summary
+			cmdOutputPath := path.Join(
+				logsDir,
+				fmt.Sprintf("%v-%v-%v.log", summary.Timestamp, pushId, summary.ButtonId),
+			)
+			stdouterr, err := ioutil.ReadFile(cmdOutputPath)
+			if err != nil {
+				fmt.Printf("Could not read stdout/stderr of %v: %v\n", pushId, err)
+			} else {
+				entry.Stdouterr = string(stdouterr)
+			}
+			break
+		}
+	}
+
+	return entry
 }

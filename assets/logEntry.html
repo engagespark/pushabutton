@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width; maximum-scale=1; minimum-scale=1;" />
+        <title>Push a Button | Log {{.entry.PushId}}</title>
+        <link rel="stylesheet" href="../static/style.css" />
+    </head>
+    <body
+
+        {{if .autorefreshInSec}}
+        onload="setTimeout(function() {window.location = '{{.entry.PushId}}?autorefresh={{.autorefreshInSec}}'}, {{.autorefreshInSec}} * 1000);  window.location.hash='bottom'"
+        {{end}}
+
+    >
+
+        <header class="slim">
+            <h1>Push Log: {{.entry.Title}}</h1>
+            <p class="subtitle">You pushed this button at {{.entry.DateTimeUTC}} UTC. <a href="../">Push a button</a>, or <a href="../logs">view other logs</a>.</p>
+        </header>
+
+        {{if .autorefreshInSec}}
+        <p class="notice">
+            Refreshing every {{.autorefreshInSec}}s. <a href="{{.entry.PushId}}">Stop</a>
+        </p>
+        {{end}}
+
+
+        <div class="cmd">
+            <h2>Command</h2>
+            <pre>{{.entry.Cmd}}</pre>
+        </div>
+
+        <div class="cmd">
+            <h2>Push-ID</h2>
+            <pre>{{.entry.PushId}}</pre>
+        </div>
+
+        <div class="cmd">
+            <h2>Stdout / Stderr</h2>
+            <pre>{{.entry.Stdouterr}}</pre>
+        </div>
+
+        <div id="bottom">
+            {{if .autorefreshInSec}}
+            <p class="notice">
+                Refreshing every {{.autorefreshInSec}}s. <a href="{{.entry.PushId}}">Stop</a>
+            </p>
+            {{end}}
+        </div>
+    </body>
+</html>

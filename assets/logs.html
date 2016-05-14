@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width; maximum-scale=1; minimum-scale=1;" />
+        <title>Push a Button | Logs</title>
+        <link rel="stylesheet" href="../static/style.css" />
+        <script src="../static/jquery-2.2.3.min.js"></script>
+        <script src="../static/logs.js"></script>
+    </head>
+    <body>
+
+        <header class="slim">
+        <h1>Logs</h1>
+        <p class="subtitle">Below's all the buttons you pushed. Maybe want to <a href="../">push one more time</a>?</p>
+        </header>
+
+        <div class="logs">
+            <p id="loading-logs" class="loading">Loading …</p>
+            <p id="no-logs" class="nothing hidden">Sorry, we've got no logs for you. Maybe you need to <a href="../">push a button</a>?</p>
+
+            <ul id="available-logs" class="available hidden"></ul>
+        </div>
+    </body>
+</html>

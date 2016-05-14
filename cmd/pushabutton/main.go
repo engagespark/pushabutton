@@ -10,6 +10,7 @@ import (
 
 var (
 	app   = kingpin.New("pushabutton", "A web application executing your scripts.")
+	debug = app.Flag("debug", "enable debug mode").Default("false").Bool()
 	setup = app.Command("setup", "Setup vanilla config or repair missing essentials. Operates on working directory.")
 	serve = app.Command("serve", "Run a webserver, waiting to run scripts.").Default()
 	addr  = serve.Arg("addr", "Where the webserver should listen.").Default(":8080").String()
