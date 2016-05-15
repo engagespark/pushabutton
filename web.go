@@ -1,6 +1,7 @@
 package pushabutton
 
 import (
+	"bytes"
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
@@ -24,7 +25,7 @@ import (
 
 const (
 	parametersSuffix    = ".parameters"
-	choicesSuffix       = ".choices.sh"
+	choicesSuffix       = ".choices"
 	parameterTypeString = "string"
 	parameterTypeChoice = "choice"
 )
@@ -172,12 +173,11 @@ func AvailableButtons() []Button {
 
 		filename := path.Base(candidate)
 
-		if strings.TrimSpace(filename) == "" {
-			fmt.Printf("skipping suspicous whitespace file %q\n", candidate)
+		if shouldIgnoreFileName(filename) {
 			return nil
 		}
 
-		if len(buttons) > 0 && strings.HasPrefix(filename, buttons[len(buttons)-1].Id) {
+		if strings.Contains(filename, parametersSuffix) || strings.Contains(filename, choicesSuffix) {
 			fmt.Printf("skipping parameter file %v of %v\n", candidate, buttons[len(buttons)-1].Id)
 			return nil
 		}
@@ -204,13 +204,11 @@ func formatTitle(filename string) string {
 	questionWords := []string{"how", "what", "who", "why", "where", "when"}
 	ext := filepath.Ext(filename)
 
-	title := strings.Title(
-		strings.Replace(
-			strings.Replace(
-				strings.TrimSuffix(filename, ext),
-				"_", " ", -1),
-			"-", " ", -1),
-	)
+	title := strings.Title(strings.TrimSuffix(filename, ext))
+
+	for _, sep := range []string{".", "-", "_"} {
+		title = strings.Replace(title, sep, " ", -1)
+	}
 
 	firstWord := strings.Fields(title)[0]
 	if containsWord(questionWords, strings.ToLower(firstWord)) {
@@ -306,7 +304,7 @@ func loadParameters(filename string) ([]ParameterDef, error) {
 		if parameter.Type == parameterTypeChoice {
 			choices, err := loadChoices(filename, parameter.Name)
 			if err != nil {
-				return nil, fmt.Errorf("Could not load choices for %v", err)
+				return nil, fmt.Errorf("Could not load choices for %v: %v", parameter.Name, err)
 			}
 			parameter.Details["choices"] = choices
 		}
@@ -318,11 +316,77 @@ func loadParameters(filename string) ([]ParameterDef, error) {
 }
 
 func loadChoices(filename string, parameterName string) ([]string, error) {
-	return []string{"hello", "yes"}, nil
+	var choices []string
+
+	choicesScriptPrefix := path.Join(buttonsDir, filename+parametersSuffix+"."+parameterName+choicesSuffix)
+	fmt.Printf("Determining choices for filename %v and parameter %v by running the script with prefix: %v\n", filename, parameterName, choicesScriptPrefix)
+	choicesScript := findSingleScriptWithPrefix(choicesScriptPrefix)
+	if choicesScript == "" {
+		return nil, fmt.Errorf("ERROR: Could not read choices for parameter %v, could not find suitable script", parameterName)
+	}
+	var stdout bytes.Buffer
+
+	fmt.Printf("Running script %v\n", choicesScript)
+	cmd := exec.Command(choicesScript)
+	cmd.Stdout = &stdout
+	cmd.Stderr = os.Stderr
+
+	err := cmd.Start()
+	if err != nil {
+		return nil, fmt.Errorf("ERROR: Could not read choices for parameter %v, could not start script: %v", parameterName, err)
+	}
+
+	err = cmd.Wait()
+	if exitError, ok := err.(*exec.ExitError); ok {
+		waitStatus := exitError.Sys().(syscall.WaitStatus)
+		return nil, fmt.Errorf("ERROR: Could not read choices for parameter %v, script returned non-zero exit code (%v): %v", parameterName, waitStatus.ExitStatus(), err)
+	} else if err != nil {
+		return nil, fmt.Errorf("ERROR: Could not read choices for parameter %v, script failed: %v", parameterName, err)
+	}
+
+	for _, line := range strings.Split(string(stdout.Bytes()), "\n") {
+		choices = append(choices, strings.TrimSpace(line))
+	}
+
+	return choices, nil
+}
+
+func findSingleScriptWithPrefix(prefix string) string {
+	var candidates []string
+	filepath.Walk(buttonsDir, func(candidate string, info os.FileInfo, err error) error {
+		if candidate == buttonsDir {
+			return nil
+		}
+		if !strings.HasPrefix(candidate, prefix) {
+			return nil
+		}
+		filename := path.Base(candidate)
+		if shouldIgnoreFileName(filename) {
+			return nil
+		}
+		if info.Mode()&os.ModePerm&0100 == 0 {
+			fmt.Printf("Ignoring non-executable: %v\n", candidate)
+			return nil
+		}
+		candidates = append(candidates, candidate)
+
+		return nil
+	})
+	if len(candidates) != 1 {
+		fmt.Printf("Found %v candidates for prefix, so ignoring them: %v\n", len(candidates), prefix)
+		return ""
+	}
+	return candidates[0]
 }
 
 func logButtonPush(buttonId string, scriptCall []string, uuid string, now time.Time) error {
-	logline := fmt.Sprintf("%v, %v, %v, %v, %v\n", now.Unix(), now.Format(time.RFC3339), uuid, buttonId, strings.Join(scriptCall, " "))
+	records := []string{
+		strconv.FormatInt(now.Unix(), 10),
+		now.Format(time.RFC3339),
+		uuid,
+		buttonId,
+		strings.Join(scriptCall, " "),
+	}
 	f, err := os.OpenFile(logfilePath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
 	if err != nil {
 		return err
@@ -330,7 +394,16 @@ func logButtonPush(buttonId string, scriptCall []string, uuid string, now time.T
 
 	defer f.Close()
 
-	if _, err = f.WriteString(logline); err != nil {
+	csvWriter := csv.NewWriter(f)
+	if err = csvWriter.Write(records); err != nil {
+		return err
+	}
+	if err = csvWriter.Error(); err != nil {
+		return err
+	}
+
+	csvWriter.Flush()
+	if err = csvWriter.Error(); err != nil {
 		return err
 	}
 
@@ -515,7 +588,7 @@ func findOrGenerateLogEntry(pushId string) LogEntry {
 	}
 	logs, err := AvailableLogs()
 	if err != nil {
-		fmt.Printf("Cannot read logs: %v", err)
+		fmt.Printf("Cannot read logs: %v\n", err)
 		logs = []LogSummaryEntry{}
 	}
 	for _, summary := range logs {
@@ -536,4 +609,13 @@ func findOrGenerateLogEntry(pushId string) LogEntry {
 	}
 
 	return entry
+}
+
+func shouldIgnoreFileName(filename string) bool {
+	if strings.HasPrefix(filename, ".") || strings.HasSuffix(filename, "~") || strings.HasSuffix(filename, "#") || strings.TrimSpace(filename) == "" {
+		fmt.Printf("skipping hidden/temporary/suspicous file %q\n", filename)
+		return true
+	}
+
+	return false
 }
