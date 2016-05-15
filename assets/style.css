@@ -10,13 +10,26 @@ body {
 
 h2 {
     margin-top: 1em;
+}
 
+h2.attop {
+    margin-top: 0em;
 }
 
 pre {
     background-color: #EEEEEE;
     padding: 0em 1em;
     width: auto;
+}
+
+button {
+    margin: 1em;
+    padding: 1em;
+    background-color: rgba(1,1,1,0);
+    border-color: black;
+    border-style: solid;
+    border-shadow: .2em #220000;
+    border-radius: 1em;
 }
 
 .slim {
@@ -76,9 +89,8 @@ ul.available {
     border-radius: 1em;
 }
 
-.buttons ul.available li:hover {
-    background-color: #FFF0F0;
-    box-shadow: inset -4px 0 -4px 0 red;
+.buttons ul.available li:hover, button:hover {
+    background-color: #FFE0E0;
     cursor: pointer;
 }
 
@@ -102,6 +114,11 @@ ul.available li.loading {
     height: 100%
 }
 
+#parameterModal .actions {
+    margin: 1em 1em 0em 1em;
+    text-align: center;
+}
+
 .modal-background {
     background-color: rgba(0, 0, 0, 0.8);
 
@@ -120,7 +137,7 @@ ul.available li.loading {
     width: 40%;
     background: white;
     border: solid 1px;
-    margin: 5em 30% 2em 30%;
+    margin: 3em 30% 2em 30%;
     padding: 1em;
     z-index: 200;
 }
@@ -133,6 +150,7 @@ ul.available li.loading {
 
 .description {
     font-size: .7em;
+    margin: .5em 0em;
 }
 
 .logs .cmd, .logs .date{

@@ -1,12 +1,12 @@
 $(function() {
   function htmlForParamDef(parameterDef) {
     var html = (
-      "<p>" + parameterDef.Name + "</p>"
+      "<p>" + parameterDef.Title + "</p>"
                 + '<p class="description">' + parameterDef.Description + "</p>"
     )
 
     if (parameterDef.Type == "string") {
-      html += '<input type="text"></input>'
+      html += '<p><input type="text" maxlength="200"></input> <span class="description">(max. 200 characters)</span></p>'
     }
 
     if (parameterDef.Type == "choice") {
@@ -32,6 +32,9 @@ $(function() {
     var $modal = $('#parameterModal');
 
     $('#parameterModal ol').empty()
+
+    $modal.find('#modal-description').text('Please provide input to push the button ' + buttonDef.Title)
+
     buttonDef.Parameters.forEach(function(parameterDef, idx) {
       var elementId = 'param-' + idx ;
       parameterDef.elementId = elementId
@@ -51,11 +54,14 @@ $(function() {
     }
 
     $('#btnPushWithParameters').unbind('click').click(
-      function() {sendFunc({"pushArguments": getArguments()}).then(redirectToLog)})
+      function() {sendFunc({"pushArguments": getArguments()}).then(redirectToLog)}
+    ).text(buttonDef.Title + ' — now for real')
     $('#btnCancelParameters').unbind('click').click(closeParameterModal)
 
     $modal.removeClass('hidden')
     $modal.show()
+
+    $('.modal-background').height($(document).height())
   }
 
   function makeButtonPushable($button, buttonDef) {
@@ -76,7 +82,7 @@ $(function() {
 
     $button.click(function(event) {
       function chooseFunc() {
-        if (buttonDef.Parameters && buttonDef.Parameters.length > 0) {
+        if (buttonDef.Parameters.length > 0) {
           return function() {
             return showParameterModal($button, buttonDef, pushFunc)
           }
@@ -89,6 +95,22 @@ $(function() {
     })
   }
 
+  function toButtonText(buttonDef) {
+    var title = buttonDef.Title
+    if (buttonDef.Parameters.length > 0) {
+      return title.substring(0, title.length - 1) + " … " + title.substr(-1)
+    }
+    return title
+  }
+
+  $('.modal-background').click(closeParameterModal)
+
+  $(document).keyup(function(e) {
+     if (e.keyCode == 27) { // escape key maps to keycode `27`
+       closeParameterModal()
+    }
+  });
+
   $.getJSON('api/buttons', function(buttons) {
     $('#loading-buttons').hide()
 
@@ -99,7 +121,7 @@ $(function() {
     }
     buttons.forEach(function(buttonDef) {
       var $button = $('<li></li>')
-                      .text(buttonDef.Title)
+                      .text(toButtonText(buttonDef))
                       .data('buttonid', buttonDef.Id)
                       .appendTo($('#available-buttons'))
       makeButtonPushable($button, buttonDef)

@@ -133,6 +133,7 @@ func (handler PostPush) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 type ParameterDef struct {
 	Name        string
+	Title       string
 	Type        string
 	Description string
 	Details     map[string]interface{}
@@ -183,7 +184,7 @@ func AvailableButtons() []Button {
 		}
 
 		buttonId := filename
-		title := formatTitle(filename)
+		title := formatButtonTitle(filename)
 		parameters, err := loadParameters(filename)
 		if err != nil {
 			fmt.Printf("Error loading button from %v: %v\n", filename, err)
@@ -200,24 +201,47 @@ func AvailableButtons() []Button {
 	return buttons
 }
 
-func formatTitle(filename string) string {
+func formatButtonTitle(filename string) string {
 	questionWords := []string{"how", "what", "who", "why", "where", "when"}
-	ext := filepath.Ext(filename)
+	title := formatTitle(filename)
 
-	title := strings.Title(strings.TrimSuffix(filename, ext))
-
-	for _, sep := range []string{".", "-", "_"} {
-		title = strings.Replace(title, sep, " ", -1)
-	}
-
-	firstWord := strings.Fields(title)[0]
+	firstWord := strings.ToLower(strings.Fields(title)[0])
 	if containsWord(questionWords, strings.ToLower(firstWord)) {
 		title += "?"
 	} else {
 		title += "!"
 	}
 
-	return strings.TrimSpace(title)
+	return title
+}
+
+func formatTitle(filename string) string {
+	ext := filepath.Ext(filename)
+
+	sanitized := strings.TrimSuffix(filename, ext)
+
+	for _, sep := range []string{".", "-", "_"} {
+		sanitized = strings.Replace(sanitized, sep, " ", -1)
+	}
+
+	// Cannot just use strings.Title on the whole string.
+	// strings.Title uppercases `bill's snake` to `Bill'S Snake`
+	var titleBuf bytes.Buffer
+	fields := strings.Fields(sanitized)
+	for idx, field := range fields {
+		if idx > 0 {
+			titleBuf.WriteRune(' ')
+		}
+		for idx, rune := range field {
+			if idx == 0 {
+				titleBuf.WriteString(strings.Title(string(rune)))
+			} else {
+				titleBuf.WriteRune(rune)
+			}
+		}
+	}
+
+	return strings.TrimSpace(titleBuf.String())
 }
 
 func containsWord(words []string, candidate string) bool {
@@ -286,6 +310,7 @@ func loadParameters(filename string) ([]ParameterDef, error) {
 		if parameter.Name == "" {
 			return nil, fmt.Errorf("%q is not a valid parameter name for %v", parameter.Name, filename)
 		}
+		parameter.Title = formatTitle(parameter.Name)
 
 		parameter.Type = parameterTypeString
 		if len(components) > 1 {
