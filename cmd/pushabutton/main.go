@@ -8,6 +8,9 @@ import (
 	"gopkg.in/alecthomas/kingpin.v2"
 )
 
+// compile passing -ldflags "-X main.Build <build sha1>"
+var Build string
+
 var (
 	app   = kingpin.New("pushabutton", "A web application executing your scripts.")
 	setup = app.Command("setup", "Setup vanilla config or repair missing essentials. Operates on working directory.")
@@ -16,8 +19,8 @@ var (
 )
 
 func main() {
-	kingpin.Version("0.0.1")
 	kingpin.CommandLine.HelpFlag.Short('h')
+	app.Version(Build)
 	app.UsageTemplate(kingpin.DefaultUsageTemplate)
 
 	switch kingpin.MustParse(app.Parse(os.Args[1:])) {
@@ -26,7 +29,7 @@ func main() {
 		pushabutton.Setup()
 		break
 	case serve.FullCommand():
-		fmt.Println("Running server")
+		fmt.Printf("Running server on %v\n", *addr)
 		pushabutton.StartServerOrCrash(*addr)
 		break
 	}
