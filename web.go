@@ -369,8 +369,15 @@ func loadChoices(filename string, parameterName string) ([]string, error) {
 		return nil, fmt.Errorf("ERROR: Could not read choices for parameter %v, script failed: %v", parameterName, err)
 	}
 
-	for _, line := range strings.Split(string(stdout.Bytes()), "\n") {
-		choices = append(choices, strings.TrimSpace(line))
+	// Generally, we're leaving the choices verbatim, with whitespace,
+	// empty lines and everything.
+	// Only exception is the last line, if it's empty, because
+	// that's just an artifact from the last newline.
+	// If you need an empty line, don't put it last.
+	lines := strings.Split(strings.TrimSuffix(string(stdout.Bytes()), "\n"), "\n")
+	for _, line := range lines {
+		choices = append(choices, line)
+
 	}
 
 	return choices, nil
