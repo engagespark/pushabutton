@@ -2,6 +2,7 @@ BINDATA_FILE := bindata.go
 TESTSETUP_DIR := testsetup
 
 GIT_COMMIT=$(shell git rev-parse HEAD)
+GIT_TAG=$(shell git describe --exact-match --abbrev=0)
 
 
 .PHONY: build
@@ -19,8 +20,7 @@ main:
 
 .PHONY:main-release
 main-release:
-	GIT_TAG=$(shell git describe --exact-match --abbrev=0)
-	go build -ldflags "-X main.Build=release-$(GIT_TAG)" cmd/pushabutton/main.go
+	go build -ldflags "-X main.Build=$(GIT_TAG)" cmd/pushabutton/main.go
 
 # Not phony
 main-debug:
@@ -44,7 +44,7 @@ serve: build-debug
 	./main
 
 .PHONY: release
-release: clean build
+release: clean build-release
 
 # Not phony
 $(TESTSETUP_DIR): build
