@@ -8,11 +8,17 @@ import (
 )
 
 const (
-	assetsDir             = "assets"
-	buttonsDir            = "buttons"
-	logsDir               = "logs"
-	exampleScriptFilename = "what_is_the_current_date.sh"
+	assetsDir  = "assets"
+	buttonsDir = "buttons"
+	logsDir    = "logs"
 )
+
+var exampleFiles = []string{
+	"what_is_the_current_date.sh",
+	"write-message-to-logged-in-user.sh",
+	"write-message-to-logged-in-user.sh.parameters",
+	"write-message-to-logged-in-user.sh.parameters.user-tty.choices.sh",
+}
 
 var logfilePath = path.Join(logsDir, "journal.log")
 
@@ -21,7 +27,7 @@ func Setup() {
 	if vanilla {
 		fmt.Println("Buttons directory missing. Creating it for you and filling it with examples.")
 		createButtonLibDir()
-		createExampleScript()
+		createExampleScripts()
 	} else {
 		fmt.Println("Buttons dir exists, skipping.")
 	}
@@ -61,19 +67,21 @@ func FileExists(path string) bool {
 	return true
 }
 
-func createExampleScript() {
-	fmt.Println("Checking example script.")
-	targetPath := path.Join(buttonsDir, exampleScriptFilename)
-	sourcePath := path.Join(assetsDir, exampleScriptFilename)
-	if FileExists(targetPath) {
-		fmt.Println("Example script exists, not touching it: ", targetPath)
-		return
+func createExampleScripts() {
+	for _, filename := range exampleFiles {
+		fmt.Printf("Checking example file: %v\n", filename)
+		targetPath := path.Join(buttonsDir, filename)
+		sourcePath := path.Join(assetsDir, filename)
+		if FileExists(targetPath) {
+			fmt.Printf("Example script exists, not touching it: %v\n", targetPath)
+			return
+		}
+		data, err := Asset(sourcePath)
+		if err != nil {
+			fmt.Printf("Failed generating the example script, sorry: %v\n", err)
+			return
+		}
+		fmt.Printf("Writing example script: %v\n", targetPath)
+		ioutil.WriteFile(targetPath, data, 0700)
 	}
-	data, err := Asset(sourcePath)
-	if err != nil {
-		fmt.Printf("Failed generating the example script, sorry: %v", err)
-		return
-	}
-	fmt.Println("Writing example script: ", targetPath)
-	ioutil.WriteFile(targetPath, data, 0700)
 }
