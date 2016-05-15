@@ -317,7 +317,7 @@ func loadParameters(filename string) ([]ParameterDef, error) {
 			parameter.Type = strings.TrimSpace(components[1])
 		}
 		if !containsWord(knownParameterTypes, parameter.Type) {
-			return nil, fmt.Errorf("%q is not a valid parameter type for %v", parameter.Name, filename)
+			return nil, fmt.Errorf("%q is not a valid parameter type for %v", parameter.Type, filename)
 		}
 
 		parameter.Description = ""
