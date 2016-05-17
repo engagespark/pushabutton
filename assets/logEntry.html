@@ -4,7 +4,7 @@
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width; maximum-scale=1; minimum-scale=1;" />
         <title>Push a Button | Log {{.entry.PushId}}</title>
-        <link rel="stylesheet" href="../static/style.css" />
+        <link rel="stylesheet" href="{{.baseUrl}}static/style.css" />
     </head>
     <body
 
@@ -14,9 +14,11 @@
 
     >
 
+        <hidden id="baseUrl" name="baseUrl" value="{{.baseUrl}}"/>
+
         <header class="slim">
             <h1>Push Log: {{.entry.Title}}</h1>
-            <p class="subtitle">You pushed this button at {{.entry.DateTimeUTC}} UTC. <a href="../">Push a button</a>, or <a href="../logs">view other logs</a>.</p>
+            <p class="subtitle">You pushed this button at {{.entry.DateTimeUTC}} UTC. <a href="{{.baseUrl}}">Push a button</a>, or <a href="{{.baseUrl}}logs">view other logs</a>.</p>
         </header>
 
         {{if .autorefreshInSec}}

@@ -32,15 +32,19 @@ const (
 
 var knownParameterTypes = []string{parameterTypeChoice, parameterTypeString}
 
-func StartServerOrCrash(addr string) {
-	http.Handle("/static/", http.StripPrefix("/static/", ServeAsset{}))
-	http.Handle("/api/push/", http.StripPrefix("/api/push/", PostPush{}))
-	http.Handle("/api/buttons", http.StripPrefix("/api/buttons", GetButtons{}))
-	http.Handle("/api/logs", http.StripPrefix("/api/logs", GetLogs{}))
+func StartServerOrCrash(addr string, baseUrl string) {
+	baseMux := http.NewServeMux()
 
-	http.Handle("/log/", http.StripPrefix("/log/", ServeLog{}))
-	http.Handle("/logs", ServeLogIndex{})
-	http.Handle("/", ServeIndex{})
+	baseMux.Handle("/static/", http.StripPrefix("/static/", ServeAsset{}))
+	baseMux.Handle("/api/push/", http.StripPrefix("/api/push/", PostPush{}))
+	baseMux.Handle("/api/buttons", http.StripPrefix("/api/buttons", GetButtons{}))
+	baseMux.Handle("/api/logs", http.StripPrefix("/api/logs", GetLogs{}))
+	baseMux.Handle("/log/", http.StripPrefix("/log/", ServeLog{baseUrl: baseUrl}))
+	baseMux.Handle("/logs", ServeLogIndex{baseUrl: baseUrl})
+	baseMux.Handle("/", ServeIndex{baseUrl: baseUrl})
+
+	http.Handle(baseUrl, http.StripPrefix(baseUrl[:len(baseUrl)-1], baseMux))
+
 	log.Fatal(http.ListenAndServe(addr, nil))
 }
 
@@ -60,7 +64,7 @@ func (handler ServeAsset) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, string(data))
 }
 
-type ServeIndex struct{}
+type ServeIndex struct{ baseUrl string }
 
 func (handler ServeIndex) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	tmpl, err := loadTemplate("index.html")
@@ -70,7 +74,7 @@ func (handler ServeIndex) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		fmt.Printf("ERROR: %v\n", err)
 		return
 	}
-	err = tmpl.Execute(w, map[string]string{})
+	err = tmpl.Execute(w, map[string]string{"baseUrl": handler.baseUrl})
 }
 
 type PostPush struct{}
@@ -483,7 +487,7 @@ func logPushResult(outfile io.Writer, statusline string) {
 	fmt.Fprintf(outfile, "\n\n============================\n"+statusline+"\n============================\n")
 }
 
-type ServeLogIndex struct{}
+type ServeLogIndex struct{ baseUrl string }
 
 func (handler ServeLogIndex) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	tmpl, err := loadTemplate("logs.html")
@@ -493,7 +497,7 @@ func (handler ServeLogIndex) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		fmt.Printf("ERROR: %v\n", err)
 		return
 	}
-	err = tmpl.Execute(w, map[string]string{})
+	err = tmpl.Execute(w, map[string]string{"baseUrl": handler.baseUrl})
 }
 
 func loadTemplate(filename string) (*template.Template, error) {
@@ -582,7 +586,7 @@ type LogEntry struct {
 	Stdouterr string
 }
 
-type ServeLog struct{}
+type ServeLog struct{ baseUrl string }
 
 func (handler ServeLog) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	pushId := r.URL.Path
@@ -604,6 +608,7 @@ func (handler ServeLog) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	tmpl.Execute(w, map[string]interface{}{
 		"autorefreshInSec": autorefreshInSec,
+		"baseUrl":          handler.baseUrl,
 		"entry":            entry,
 	})
 }
