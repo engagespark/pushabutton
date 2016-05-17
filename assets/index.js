@@ -24,7 +24,7 @@ $(function() {
   }
 
   function redirectToLog(response) {
-    window.location = '/log/' + response.pushId + '?autorefresh=10'
+    window.location = $('#baseUrl').val() + 'log/' + response.pushId + '?autorefresh=10'
   }
 
   function showParameterModal($button, buttonDef, sendFunc) {
@@ -67,7 +67,7 @@ $(function() {
   function makeButtonPushable($button, buttonDef) {
     function pushFunc(pushArguments) {
       return $.ajax(
-        'api/push/' + $button.data('buttonid'), {
+        $('#baseUrl').val() + 'api/push/' + $button.data('buttonid'), {
           method: 'POST',
           contentType: 'application/json; charset=UTF-8',
           data: JSON.stringify(pushArguments || {pushArguments: []}),
@@ -111,7 +111,7 @@ $(function() {
     }
   });
 
-  $.getJSON('api/buttons', function(buttons) {
+  $.getJSON($('#baseUrl').val() + 'api/buttons', function(buttons) {
     $('#loading-buttons').hide()
 
     if (!buttons) {

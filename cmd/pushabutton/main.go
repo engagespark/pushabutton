@@ -12,10 +12,11 @@ import (
 var Build string
 
 var (
-	app   = kingpin.New("pushabutton", "A web application executing your scripts.")
-	setup = app.Command("setup", "Setup vanilla config or repair missing essentials. Operates on working directory.")
-	serve = app.Command("serve", "Run a webserver, waiting to run scripts.").Default()
-	addr  = serve.Arg("addr", "Where the webserver should listen.").Default(":8080").String()
+	app     = kingpin.New("pushabutton", "A web application executing your scripts.")
+	setup   = app.Command("setup", "Setup vanilla config or repair missing essentials. Operates on working directory.")
+	serve   = app.Command("serve", "Run a webserver, waiting to run scripts.").Default()
+	addr    = serve.Arg("addr", "Where the webserver should listen.").Default(":8080").String()
+	baseUrl = serve.Flag("base-url", "The base URL for the webapp.").Default("/").String()
 )
 
 func main() {
@@ -30,7 +31,7 @@ func main() {
 		break
 	case serve.FullCommand():
 		fmt.Printf("Running server on %v\n", *addr)
-		pushabutton.StartServerOrCrash(*addr)
+		pushabutton.StartServerOrCrash(*addr, *baseUrl)
 		break
 	}
 }

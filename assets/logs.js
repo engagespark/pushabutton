@@ -16,7 +16,7 @@ $(function() {
 
   }
 
-  $.getJSON('../api/logs', function(entries) {
+  $.getJSON($('#baseUrl').val() + 'api/logs', function(entries) {
     $('#loading-logs').hide()
 
     if (!entries) {
@@ -29,7 +29,7 @@ $(function() {
       var $li = $('<li></li>').appendTo($('#available-logs'))
       $li.append(
         '<span class="date">' + formatTimestamp(entry.Timestamp) + '</span>'
-                 + ' <a href="../log/' + entry.PushId + '">' + entry.Title + '</a>'
+                 + ' <a href="' + $('#baseUrl').val() + 'log/' + entry.PushId + '">' + entry.Title + '</a>'
                  + ' <span class="cmd"><pre>' + entry.Cmd + '</pre></span>'
       )
     })
