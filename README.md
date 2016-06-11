@@ -1,5 +1,79 @@
-# pushabutton
-Simple web app to run scripts
+# Pushabutton
+Minimal web app to run scripts.
+
+Put anything executable in the `buttons` dir.
+It'll show up as a button in the web UI.
+Then, you can push a button.
+
+For example,
+
+    buttons$ ln -s $(which date)
+
+Looking at the web-UI, you immediately get a button that you can click.
+
+
+
+![Pushabutton automatically renders a button for you](docs/intro-date-button.png)
+
+
+
+After clicking, the executable is run and you get a log:
+
+
+![Pushabutton shows you what is happening on pushing the button](docs/intro-date-log.png)
+
+
+Remember what command you ran yesterday? No worries, `Pushabutton` remembers.
+
+
+![Pushabutton remembers your button pushes](docs/intro-date-log-list.png)
+
+## Simple Parameters
+
+Oh, and then there's parameters! Let's say you're interested in running the `id` command from the web, to find the IDs of users:
+
+    $ ln -s $(which id)
+
+Now, you need to pass a username. Add a textfile `id.parameters`:
+
+    $ cat id.parameters
+    username
+
+When clicking the button, you'll get a modal asking for the username:
+
+![Pushabutton automatically asks for the username!](docs/intro-id-parameters-modal.png)
+
+## More features
+
+* Add descriptions to parameters
+* Make the user choose a value for a parameter with a drop-down list.
+* Determine the valid choice at runtime (by running a script).
+
+How to configure these, see the examples after running setup.
+
+
+## Setup & Running
+
+Run the setup command:
+
+  $ ./pushabutton setup
+
+This will setup the necessary directories and some demo scripts:
+
+    $ tree
+    .
+    ├── buttons
+    │   ├── what_is_the_current_date.sh
+    │   ├── write-message-to-logged-in-user.sh
+    │   ├── write-message-to-logged-in-user.sh.parameters
+    │   └── write-message-to-logged-in-user.sh.parameters.user-tty.choices.sh
+    ├── logs
+    └── pushabutton
+
+Run the server:
+
+   $ ./pushabutton serve
+   Running server on :8080
 
 
 # License
