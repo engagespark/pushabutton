@@ -4,7 +4,6 @@ TESTSETUP_DIR := testsetup
 GIT_COMMIT=$(shell git rev-parse HEAD)
 GIT_TAG=$(shell git describe --exact-match --abbrev=0)
 
-
 .PHONY: build
 build: assets main
 
@@ -20,7 +19,7 @@ main:
 
 .PHONY:main-release
 main-release:
-	go build -ldflags "-X main.Build=$(GIT_TAG)" cmd/pushabutton/main.go
+	bash -c '[[ -n "$(GIT_TAG)" ]] && go build -ldflags "-X main.Build=$(GIT_TAG)" cmd/pushabutton/main.go'
 
 # Not phony
 main-debug:
