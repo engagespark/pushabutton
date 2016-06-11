@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/mknecht/pushabutton"
+	"github.com/engagespark/pushabutton"
 	"gopkg.in/alecthomas/kingpin.v2"
 )
 
@@ -12,9 +12,11 @@ import (
 var Build string
 
 var (
-	app     = kingpin.New("pushabutton", "A web application executing your scripts.")
+	app = kingpin.New("pushabutton", `A web application executing your scripts.
+
+https://github.com/engagespark/pushabutton/`)
 	setup   = app.Command("setup", "Setup vanilla config or repair missing essentials. Operates on working directory.")
-	serve   = app.Command("serve", "Run a webserver, waiting to run scripts.").Default()
+	serve   = app.Command("serve", "Run a webserver, waiting to run scripts.")
 	addr    = serve.Arg("addr", "Where the webserver should listen.").Default(":8080").String()
 	baseUrl = serve.Flag("base-url", "The base URL for the webapp.").Default("/").String()
 )
