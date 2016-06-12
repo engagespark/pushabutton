@@ -3,11 +3,27 @@ Minimal web app to run scripts.
 
 Put anything executable in the `buttons` dir.
 It'll show up as a button in the web UI.
-Then, you can push a button.
+Then, you can push a button!
 
-For example,
+## Get started
 
-    buttons$ ln -s $(which date)
+In a shell, run the following:
+
+    mkdir smalltasks && cd smalltasks
+    curl -o pushabutton https://github.com/engagespark/pushabutton/releases/download/0.0.2/pushabutton-0.0.2-x86-64-glibc
+    ./pushabutton setup
+    ./pushabutton serve
+
+Now, visit [http://localhost:8080/](http://localhost:8080/).
+
+For more info, run `./pushabutton --help`
+
+## Introduction
+
+For example, let's create a “date” button that runs the `date` command.
+To do this, we create a link to the executable in the buttons dir:
+
+    smalltasks$ cd buttons && ln -s $(which date)
 
 Looking at the web-UI, you immediately get a button that you can click.
 
@@ -59,16 +75,17 @@ You copy the binary, you dump the script in the buttons dir, you run the webserv
 You can do simple parameters, you have a simple log — but that's it.
 Pushabutton fills a gap at the low-effort, simple-need end of the spectrum.
 
-It will not be enough for many use cases, and in fact it is not meant to be. If you need:
+It will not be enough for many use cases, and in fact it is not meant to be. Pushabutton does not care about:
 
 * Authorization (this user can do this, the other one cannot)
 * Scheduling (at 5pm tomorrow do this and at every 2nd Sunday do that)
 * Editing from the web
 * Pipelining
 * Conditional logic
+* Branding and themes
 
-then Pushabutton is not for you.
-There are other tools that where you can run something from the web, and that do those things well:
+If you need any of those, then Pushabutton is not for you.
+There are other tools where you can run something from a web-UI, and that do those things well:
 
 * [Rundeck](http://rundeck.org/),
 * [Jenkins](https://jenkins.io/index.html)
