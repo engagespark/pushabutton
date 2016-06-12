@@ -10,7 +10,8 @@ Then, you can push a button!
 In a shell, run the following:
 
     mkdir smalltasks && cd smalltasks
-    curl -o pushabutton https://github.com/engagespark/pushabutton/releases/download/0.0.2/pushabutton-0.0.2-x86-64-glibc
+    curl -L -o pushabutton https://github.com/engagespark/pushabutton/releases/download/0.0.2/pushabutton-0.0.2-x86-64-glibc
+    chmod u+x pushabutton
     ./pushabutton setup
     ./pushabutton serve
 
