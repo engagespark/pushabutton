@@ -1,6 +1,7 @@
 # 0.0.2
 
-- CLI command serve is no longer default (breaking change)
+- added footer
+- CLI command serve is no longer default, you have to explicitely choose it. (breaking change)
 - base-URL of webapp is now configurable
 
 # 0.0.1
