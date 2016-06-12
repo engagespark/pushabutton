@@ -1,5 +1,5 @@
 # Pushabutton
-Minimal web app to run scripts.
+Minimal, single-binary web app to run scripts.
 
 Put anything executable in the `buttons` dir.
 It'll show up as a button in the web UI.
@@ -28,6 +28,7 @@ Remember what command you ran yesterday? No worries, `Pushabutton` remembers.
 
 ![Pushabutton remembers your button pushes](docs/intro-date-log-list.png)
 
+
 ## Simple Parameters
 
 Oh, and then there's parameters! Let's say you're interested in running the `id` command from the web, to find the IDs of users:
@@ -50,6 +51,29 @@ When clicking the button, you'll get a modal asking for the username:
 * Determine the valid choice at runtime (by running a script).
 
 How to configure these, see the examples after running setup.
+
+
+## What it is and what it's not
+
+Pushabutton is about enabling non-techies to use your simple helper scripts, too.
+You copy the binary, you dump the script in the buttons dir, you run the webserver. Then you paste the link in the mail to your colleague, and that's it — done.
+You can do simple parameters, you have a simple log — but that's it.
+Pushabutton fills a gap at the low-effort, simple-need end of the spectrum.
+
+It will not be enough for many use cases, and in fact it is not meant to be. If you need:
+
+* Authorization (this user can do this, the other one cannot)
+* Scheduling (at 5pm tomorrow do this and at every 2nd Sunday do that)
+* Editing from the web
+* Pipelining
+* Conditional logic
+
+then Pushabutton is not for you.
+There are other tools that where you can run something from the web, and that do those things well:
+
+* [Rundeck](http://rundeck.org/),
+* [Jenkins](https://jenkins.io/index.html)
+* and many others.
 
 
 ## Setup & Running
