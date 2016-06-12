@@ -52,7 +52,30 @@ When clicking the button, you'll get a modal asking for the username:
 How to configure these, see the examples after running setup.
 
 
-## Setup & Running
+## What it is and what it's not
+
+Pushabutton is about enabling non-techies to use your simple helper scripts, too.
+You copy the binary, you dump the script in the buttons dir, you run the webserver. Then you paste the link in the mail to your colleague, and that's it — done.
+You can do simple parameters, you have a simple log — but that's it.
+Pushabutton fills a gap at the low-effort, simple-need end of the spectrum.
+
+It will not be enough for many use cases, and in fact it is not meant to be. If you need:
+
+* Authorization (this user can do this, the other one cannot)
+* Scheduling (at 5pm tomorrow do this and at every 2nd Sunday do that)
+* Editing from the web
+* Pipelining
+* Conditional logic
+
+then Pushabutton is not for you.
+There are other tools that where you can run something from the web, and that do those things well:
+
+* [Rundeck](http://rundeck.org/),
+* [Jenkins](https://jenkins.io/index.html)
+* and many others.
+
+
+## Setup & Running & Uninstalling
 
 Run the setup command:
 
@@ -70,11 +93,20 @@ This will setup the necessary directories and some demo scripts:
     ├── logs
     └── pushabutton
 
-Run the server:
+What did we get?
+
+* `buttons` is where your scripts live. Link them or drop them there — as long as it's executable, Pushabutton will make a button out of it. At the beginning, two scripts demonstrate how to create your own buttons.
+* `logs` that's where, for every button push, log files are stored. The `journal.log` is the file that indexes the rest.
+
+
+**Run the server**:
 
    $ ./pushabutton serve
    Running server on :8080
 
+
+Want to **uninstall**? Simple. Just delete the entire directory.
+There's nothing else.
 
 # License
 
