@@ -90,6 +90,7 @@ There are other tools where you can run something from a web-UI, and that do tho
 
 * [Rundeck](http://rundeck.org/),
 * [Jenkins](https://jenkins.io/index.html)
+* [Wooey](https://github.com/wooey/Wooey) specifically for running Python code from the web
 * and many others.
 
 
